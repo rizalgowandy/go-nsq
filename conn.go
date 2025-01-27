@@ -119,8 +119,7 @@ func NewConn(addr string, config *Config, delegate ConnDelegate) *Conn {
 // The logger parameter is an interface that requires the following
 // method to be implemented (such as the the stdlib log.Logger):
 //
-//    Output(calldepth int, s string)
-//
+//	Output(calldepth int, s string)
 func (c *Conn) SetLogger(l logger, lvl LogLevel, format string) {
 	c.logGuard.Lock()
 	defer c.logGuard.Unlock()
@@ -345,6 +344,8 @@ func (c *Conn) identify() (*IdentifyResponse, error) {
 		ci["output_buffer_timeout"] = int64(c.config.OutputBufferTimeout / time.Millisecond)
 	}
 	ci["msg_timeout"] = int64(c.config.MsgTimeout / time.Millisecond)
+	ci["topology_region"] = c.config.TopologyRegion
+	ci["topology_zone"] = c.config.TopologyZone
 	cmd, err := Identify(ci)
 	if err != nil {
 		return nil, ErrIdentify{err.Error()}
@@ -468,7 +469,7 @@ func (c *Conn) upgradeSnappy() error {
 		conn = c.tlsConn
 	}
 	c.r = snappy.NewReader(conn)
-	c.w = snappy.NewWriter(conn)
+	c.w = snappy.NewBufferedWriter(conn)
 	frameType, data, err := ReadUnpackedResponse(c, c.config.MaxMsgSize)
 	if err != nil {
 		return err
